@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/radiation-network/telemetry.schema.json",
+  "title": "Distributed Radiation Network Telemetry Payload",
+  "type": "object",
+  "required": ["node_id", "site_id", "timestamp", "sensor_type", "reading", "status"],
+  "additionalProperties": true,
+  "properties": {
+    "node_id": {
+      "type": "string",
+      "description": "Stable unique detector/node identifier, e.g. detector-001."
+    },
+    "site_id": {
+      "type": "string",
+      "description": "Deployment or lab/site identifier, e.g. utd-test-lab."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC ISO-8601 timestamp generated at the node when possible."
+    },
+    "sensor_type": {
+      "type": "string",
+      "description": "simulated-radiation, dht22-simulation, gm-tube, scintillator, etc."
+    },
+    "reading": {
+      "type": "object",
+      "description": "Flexible reading object. For real detectors, include radiation fields. For early prototype, simulated values are acceptable.",
+      "additionalProperties": {
+        "type": ["number", "integer", "string", "boolean", "null"]
+      },
+      "properties": {
+        "dose_rate_usv_h": { "type": "number" },
+        "counts_per_second": { "type": "number" },
+        "gamma_current": { "type": "number" },
+        "gamma_average": { "type": "number" },
+        "gamma_max": { "type": "number" },
+        "neutron_detected": { "type": "boolean" },
+        "temperature_c": { "type": "number" },
+        "humidity_pct": { "type": "number" }
+      }
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lat": { "type": "number" },
+        "lon": { "type": "number" },
+        "accuracy_m": { "type": "number" }
+      }
+    },
+    "battery_pct": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "rssi": {
+      "type": ["number", "null"],
+      "description": "Received signal strength indicator when available."
+    },
+    "firmware_version": {
+      "type": ["string", "null"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "warning", "error", "offline", "maintenance"]
+    },
+    "sequence": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Monotonic per-node sequence number for debugging message loss/order."
+    }
+  }
+}

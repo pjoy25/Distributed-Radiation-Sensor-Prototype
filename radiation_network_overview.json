@@ -1,0 +1,84 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {"type": "influxdb", "uid": "influxdb-radiation"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 16, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single", "sort": "none"}},
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_readings\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"sensor_telemetry\")\n  |> filter(fn: (r) => r._field == \"dose_rate_usv_h\" or r._field == \"gamma_current\")\n  |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Dose Rate / Gamma Current by Node",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "influxdb-radiation"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+      "id": 2,
+      "options": {"displayMode": "lcd", "maxVizHeight": 300, "minVizHeight": 16, "minVizWidth": 8, "namePlacement": "auto", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showUnfilled": true, "valueMode": "color"},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_readings\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"sensor_alerts\")\n  |> filter(fn: (r) => r._field == \"alert_level\")\n  |> last()",
+          "refId": "A"
+        }
+      ],
+      "title": "Latest Alert Level",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "influxdb-radiation"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "id": 3,
+      "options": {"showHeader": true},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_readings\")\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"sensor_telemetry\")\n  |> filter(fn: (r) => r._field == \"battery_pct\" or r._field == \"rssi\")\n  |> last()",
+          "refId": "A"
+        }
+      ],
+      "title": "Latest Node Health",
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "influxdb", "uid": "influxdb-radiation"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "id": 4,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single", "sort": "none"}},
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_readings\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"sensor_telemetry\")\n  |> filter(fn: (r) => r._field == \"counts_per_second\")\n  |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)",
+          "refId": "A"
+        }
+      ],
+      "title": "Counts Per Second",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["radiation", "iot", "prototype"],
+  "templating": {"list": []},
+  "time": {"from": "now-30m", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Radiation Network Prototype Overview",
+  "uid": "radiation-network-overview",
+  "version": 1,
+  "weekStart": ""
+}

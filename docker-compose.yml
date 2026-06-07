@@ -1,0 +1,106 @@
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: radiation-mqtt-broker
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mqtt_data:/mosquitto/data
+      - mqtt_log:/mosquitto/log
+    networks:
+      - radiation-net
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: radiation-influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_USERNAME:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_PASSWORD:-adminpassword123}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG:-utd-radiation-lab}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET:-sensor_readings}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_ADMIN_TOKEN:-dev-super-secret-token-change-me}
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    networks:
+      - radiation-net
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: radiation-grafana
+    restart: unless-stopped
+    depends_on:
+      - influxdb
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_ORG: ${INFLUXDB_ORG:-utd-radiation-lab}
+      INFLUXDB_BUCKET: ${INFLUXDB_BUCKET:-sensor_readings}
+      INFLUXDB_ADMIN_TOKEN: ${INFLUXDB_ADMIN_TOKEN:-dev-super-secret-token-change-me}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - radiation-net
+
+  ingestion-service:
+    build:
+      context: ./ingestion
+    container_name: radiation-ingestion-service
+    restart: unless-stopped
+    depends_on:
+      - mqtt-broker
+      - influxdb
+    environment:
+      MQTT_HOST: mqtt-broker
+      MQTT_PORT: 1883
+      MQTT_TOPIC: radiation/+/+/telemetry
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_TOKEN: ${INFLUXDB_ADMIN_TOKEN:-dev-super-secret-token-change-me}
+      INFLUXDB_ORG: ${INFLUXDB_ORG:-utd-radiation-lab}
+      INFLUXDB_BUCKET: ${INFLUXDB_BUCKET:-sensor_readings}
+      JSON_SCHEMA_PATH: /app/schema/telemetry.schema.json
+      ALERT_THRESHOLD_LEVEL1_USV_H: ${ALERT_THRESHOLD_LEVEL1_USV_H:-0.3}
+      ALERT_THRESHOLD_LEVEL2_USV_H: ${ALERT_THRESHOLD_LEVEL2_USV_H:-1.0}
+      ALERT_THRESHOLD_LEVEL3_USV_H: ${ALERT_THRESHOLD_LEVEL3_USV_H:-100.0}
+    volumes:
+      - ./schema:/app/schema:ro
+    networks:
+      - radiation-net
+
+  simulator:
+    build:
+      context: ./simulator
+    container_name: radiation-simulator
+    profiles: ["simulator"]
+    depends_on:
+      - mqtt-broker
+    environment:
+      MQTT_HOST: mqtt-broker
+      MQTT_PORT: 1883
+      SITE_ID: utd-test-lab
+      NODE_COUNT: 5
+      PUBLISH_INTERVAL_SECONDS: 2
+      TOPIC_PREFIX: radiation
+    networks:
+      - radiation-net
+
+volumes:
+  mqtt_data:
+  mqtt_log:
+  influxdb_data:
+  grafana_data:
+
+networks:
+  radiation-net:
+    driver: bridge
